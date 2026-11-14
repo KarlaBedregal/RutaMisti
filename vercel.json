@@ -1,0 +1,5 @@
+{
+  "buildCommand": "prisma db push && tsx prisma/seed.ts && next build",
+  "installCommand": "pnpm install",
+  "framework": "nextjs"
+}
