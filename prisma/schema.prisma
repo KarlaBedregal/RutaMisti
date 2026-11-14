@@ -1,0 +1,257 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  telefono      String?
+  rol           String    @default("turista") // turista | negocio | admin
+  idioma        String    @default("es")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  negocios Negocio[]
+  reservas Reserva[]
+}
+
+// Auth.js models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Categoria {
+  id        String    @id @default(cuid())
+  nombreEs  String
+  nombreEn  String
+  slug      String    @unique
+  icono     String
+  negocios  Negocio[]
+}
+
+model Negocio {
+  id          String   @id @default(cuid())
+  ownerId     String
+  categoriaId String
+  nombre      String
+  slug        String   @unique
+  descripcionEs String?
+  descripcionEn String?
+  direccion   String?
+  distrito    String?
+  lat         Float?
+  lng         Float?
+  whatsapp    String?
+  telefono    String?
+  instagram   String?
+  facebook    String?
+  horario     String?  // JSON string
+  rangoPrecio Int      @default(1) // 1=S/ 2=S/S/ 3=S/S/S/
+  aceptaYape  Boolean  @default(false)
+  aceptaTarjeta Boolean @default(false)
+  idiomasAtencion String? // JSON array string
+  aceptaReservas  Boolean @default(true)
+  capacidadMax    Int?
+  estado          String  @default("pendiente") // pendiente | aprobado | rechazado | suspendido
+  ruc             String?
+  ratingPromedio  Float   @default(0)
+  totalResenas    Int     @default(0)
+  vistas          Int     @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner      User            @relation(fields: [ownerId], references: [id])
+  categoria  Categoria       @relation(fields: [categoriaId], references: [id])
+  fotos      FotoNegocio[]
+  servicios  Servicio[]
+  reservas   Reserva[]
+  resenas    Resena[]
+  rutaParadas RutaParada[]
+  qrCodes    QrCode[]
+  eventos    Evento[]
+}
+
+model FotoNegocio {
+  id        String  @id @default(cuid())
+  negocioId String
+  url       String
+  orden     Int     @default(0)
+  esPortada Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  negocio Negocio @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+}
+
+model Servicio {
+  id          String   @id @default(cuid())
+  negocioId   String
+  nombreEs    String
+  nombreEn    String?
+  descripcion String?
+  precio      Float
+  duracionMin Int?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  negocio  Negocio   @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  reservas Reserva[]
+}
+
+model Ruta {
+  id               String   @id @default(cuid())
+  tituloEs         String
+  tituloEn         String?
+  slug             String   @unique
+  descripcionEs    String?
+  descripcionEn    String?
+  portadaUrl       String?
+  duracionEstimada String?
+  dificultad       String?
+  publicada        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  paradas RutaParada[]
+  qrCodes QrCode[]
+}
+
+model RutaParada {
+  id        String  @id @default(cuid())
+  rutaId    String
+  negocioId String
+  orden     Int
+  notaEs    String?
+  notaEn    String?
+
+  ruta    Ruta    @relation(fields: [rutaId], references: [id], onDelete: Cascade)
+  negocio Negocio @relation(fields: [negocioId], references: [id])
+}
+
+model Reserva {
+  id              String   @id @default(cuid())
+  codigo          String   @unique
+  negocioId       String
+  servicioId      String?
+  turistaId       String?
+  nombreContacto  String
+  emailContacto   String
+  whatsappContacto String?
+  pais            String?
+  fecha           String   // ISO date string
+  hora            String
+  personas        Int      @default(1)
+  comentario      String?
+  estado          String   @default("pendiente") // pendiente | confirmada | rechazada | cancelada | completada | no_asistio
+  canalOrigen     String   @default("web")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  negocio  Negocio   @relation(fields: [negocioId], references: [id])
+  servicio Servicio? @relation(fields: [servicioId], references: [id])
+  turista  User?     @relation(fields: [turistaId], references: [id])
+  resena   Resena?
+}
+
+model Resena {
+  id               String   @id @default(cuid())
+  reservaId        String   @unique
+  negocioId        String
+  autorNombre      String
+  puntaje          Int      // 1..5
+  comentario       String?
+  idioma           String   @default("es")
+  respuestaNegocio String?
+  estado           String   @default("visible") // visible | oculta | reportada
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  reserva Reserva @relation(fields: [reservaId], references: [id])
+  negocio Negocio @relation(fields: [negocioId], references: [id])
+}
+
+model QrCode {
+  id         String   @id @default(cuid())
+  tipo       String   // negocio | ruta
+  negocioId  String?
+  rutaId     String?
+  etiqueta   String?
+  slugCorto  String   @unique
+  escaneos   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  negocio Negocio? @relation(fields: [negocioId], references: [id])
+  ruta    Ruta?    @relation(fields: [rutaId], references: [id])
+}
+
+model Evento {
+  id        String   @id @default(cuid())
+  tipo      String   // vista_perfil | click_whatsapp | click_mapa | escaneo_qr | reserva_creada
+  negocioId String?
+  rutaId    String?
+  metadata  String?  // JSON string
+  createdAt DateTime @default(now())
+
+  negocio Negocio? @relation(fields: [negocioId], references: [id])
+}
+
+model Reclamo {
+  id              String    @id @default(cuid())
+  codigo          String    @unique
+  tipo            String    // reclamo | queja
+  nombre          String
+  documento       String?
+  email           String
+  telefono        String?
+  domicilio       String?
+  detalle         String
+  pedido          String?
+  estado          String    @default("pendiente")
+  respuesta       String?
+  fechaRespuesta  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}

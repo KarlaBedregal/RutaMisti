@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+prisma/dev.db
+
+# AI tools
+.agents/
+.claude/
+.cursor/
+.devin/
+prompt_web_startup_turismo_aqp.md
